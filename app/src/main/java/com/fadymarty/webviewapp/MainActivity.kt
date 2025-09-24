@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.fadymarty.webviewapp.ui.theme.WebViewAppTheme
 import com.kevinnzou.web.WebView
 import com.kevinnzou.web.rememberWebViewState
@@ -29,6 +30,7 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        installSplashScreen()
         checkMultiplePermission()
         enableEdgeToEdge()
         setContent {
@@ -36,7 +38,7 @@ class MainActivity : ComponentActivity() {
 
                 // Замените ссылку "https://example.com" на нужную вам
                 val url =
-                    "https://www.cleanpng.com/png-skull-with-snake-and-cracks-8538323/download-png.html"
+                    "https://example.com"
 
                 val state = rememberWebViewState(url)
 
