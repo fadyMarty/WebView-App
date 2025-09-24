@@ -37,8 +37,7 @@ class MainActivity : ComponentActivity() {
             WebViewAppTheme {
 
                 // Замените ссылку "https://example.com" на нужную вам
-                val url =
-                    "https://example.com"
+                val url = "https://example.com"
 
                 val state = rememberWebViewState(url)
 
