@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
             WebViewAppTheme {
 
                 // Замените ссылку "https://example.com" на нужную вам
-                val url = "https://example.com"
+                val url = "https://esk.one/p/zWF85A4xe"
 
                 val state = rememberWebViewState(url)
 
@@ -53,6 +53,8 @@ class MainActivity : ComponentActivity() {
                             it.settings.domStorageEnabled = true
                             it.settings.javaScriptCanOpenWindowsAutomatically = true
                             it.settings.supportMultipleWindows()
+                            it.settings.loadWithOverviewMode = true
+                            it.settings.useWideViewPort = true
                             it.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
                                 if (checkMultiplePermission()) {
                                     download(
