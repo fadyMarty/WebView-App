@@ -3,12 +3,19 @@ package com.fadymarty.webviewapp
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.DownloadManager
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.URLUtil
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
+import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -16,17 +23,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.fadymarty.webviewapp.ui.theme.WebViewAppTheme
-import com.kevinnzou.web.WebView
-import com.kevinnzou.web.rememberWebViewState
 import java.io.File
 
 
 class MainActivity : ComponentActivity() {
+
+    private var uploadMessage: ValueCallback<Array<Uri>>? = null
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,24 +46,37 @@ class MainActivity : ComponentActivity() {
             WebViewAppTheme {
 
                 // Замените ссылку "https://example.com" на нужную вам
-                val url = "https://esk.one/p/zWF85A4xe"
-
-                val state = rememberWebViewState(url)
+                val url = "https://www.file.io/"
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    WebView(
+                    AndroidView(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding),
-                        state = state,
-                        onCreated = {
-                            it.settings.javaScriptEnabled = true
-                            it.settings.allowFileAccess = true
-                            it.settings.domStorageEnabled = true
-                            it.settings.javaScriptCanOpenWindowsAutomatically = true
-                            it.settings.supportMultipleWindows()
-                            it.settings.loadWithOverviewMode = true
-                            it.settings.useWideViewPort = true
+                        factory = {
+                            WebView(it).apply {
+                                layoutParams = ViewGroup.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.MATCH_PARENT
+                                )
+                            }
+                        }, update = {
+                            it.loadUrl(url)
+                            it.setInitialScale(0);
+                            it.getSettings().javaScriptEnabled = true
+                            it.getSettings().domStorageEnabled = true
+                            it.getSettings().allowContentAccess = true
+                            it.getSettings().allowFileAccess = true
+                            it.getSettings().allowUniversalAccessFromFileURLs = true
+                            it.getSettings().allowFileAccessFromFileURLs = true
+                            it.getSettings().javaScriptCanOpenWindowsAutomatically = true
+                            it.getSettings().loadWithOverviewMode = true
+                            it.getSettings().useWideViewPort = true
+                            it.getSettings().setSupportMultipleWindows(true)
+                            it.getSettings().databaseEnabled = true
+                            it.getSettings().javaScriptCanOpenWindowsAutomatically = true;
+                            it.getSettings().setGeolocationEnabled(true)
+                            it.getSettings().javaScriptEnabled = true
                             it.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
                                 if (checkMultiplePermission()) {
                                     download(
@@ -64,12 +86,48 @@ class MainActivity : ComponentActivity() {
                                         mimeType
                                     )
                                 }
-
+                            }
+                            it.webChromeClient = object : WebChromeClient() {
+                                override fun onShowFileChooser(
+                                    webView: WebView,
+                                    filePathCallback: ValueCallback<Array<Uri>>,
+                                    fileChooserParams: FileChooserParams
+                                ): Boolean {
+                                    uploadMessage = filePathCallback
+                                    try {
+                                        startActivityForResult(
+                                            fileChooserParams.createIntent(),
+                                            100
+                                        )
+                                        return true
+                                    } catch (e: ActivityNotFoundException) {
+                                        e.printStackTrace()
+                                        uploadMessage = null
+                                        return false
+                                    }
+                                }
                             }
                         }
                     )
                 }
             }
+        }
+    }
+
+    override fun onActivityResult(
+        requestCode: Int,
+        resultCode: Int,
+        data: Intent?
+    ) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 100) {
+            uploadMessage?.onReceiveValue(
+                WebChromeClient.FileChooserParams.parseResult(
+                    resultCode,
+                    intent
+                )
+            )
+            uploadMessage = null
         }
     }
 
@@ -110,15 +168,19 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkMultiplePermission(): Boolean {
-        val multiplePermissions =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                arrayListOf(Manifest.permission.POST_NOTIFICATIONS)
-            } else {
-                arrayListOf(
-                    Manifest.permission.READ_EXTERNAL_STORAGE,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                )
-            }
+        val multiplePermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            arrayListOf(
+                Manifest.permission.POST_NOTIFICATIONS,
+                Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.READ_MEDIA_VIDEO,
+                Manifest.permission.READ_MEDIA_AUDIO
+            )
+        } else {
+            arrayListOf(
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            )
+        }
         val neededPermissions = arrayListOf<String>()
         for (permission in multiplePermissions) {
             if (ContextCompat.checkSelfPermission(
